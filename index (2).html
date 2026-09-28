@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cerrojo · Validador y generador de contraseñas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#3a2a55;          /* ciruela */
+    --paper:#f5f0ff;        /* lila casi blanco */
+    --lila:#dccbff;
+    --durazno:#ffd9c4;
+    --cielo:#c9e6ff;
+    --menta:#c4f1d8;
+    --rosa:#ffcfdd;
+    --mantequilla:#fff0b3;
+    --ok-ink:#155c3c; --bad-ink:#8c1d47;
+    --shadow:5px 5px 0 var(--ink);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;color:var(--ink);font:17px/1.55 "Bricolage Grotesque",system-ui,sans-serif;
+    background:var(--paper);
+    background-image:radial-gradient(var(--lila) 1.6px,transparent 1.6px);background-size:22px 22px}
+  main{max-width:1000px;margin:0 auto;padding:44px 20px 70px}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin-bottom:10px}
+  h1{font-size:clamp(3rem,9vw,5.6rem);line-height:.9;margin:0;font-weight:800;letter-spacing:-.04em;
+    font-stretch:75%;padding:6px 20px 12px;background:var(--mantequilla);border:3px solid var(--ink);
+    border-radius:999px 999px 999px 18px;box-shadow:var(--shadow);transform:rotate(-2deg)}
+  .badge{font-weight:700;background:var(--rosa);border:3px solid var(--ink);border-radius:14px;
+    padding:6px 14px;box-shadow:3px 3px 0 var(--ink);transform:rotate(3deg)}
+  .sub{margin:22px 0 36px;max-width:56ch;font-size:1.1rem}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start}
+  @media(max-width:800px){.grid{grid-template-columns:1fr}}
+  section{border:3px solid var(--ink);box-shadow:var(--shadow);padding:26px 24px 28px}
+  section:nth-of-type(1){background:var(--cielo);border-radius:34px 34px 34px 8px;transform:rotate(-.6deg)}
+  section:nth-of-type(2){background:var(--durazno);border-radius:34px 8px 34px 34px;transform:rotate(.6deg)}
+  h2{font-size:1.5rem;margin:0 0 18px;font-weight:800;letter-spacing:-.02em}
+  label{display:block;font-weight:700;margin-bottom:7px}
+  input[type=text],input[type=password]{width:100%;padding:12px 14px;font:500 1rem "DM Mono",ui-monospace,monospace;
+    border:3px solid var(--ink);border-radius:14px;background:#fff;color:var(--ink)}
+  input::placeholder{color:#8b7aa8}
+  input:focus,button:focus-visible{outline:4px solid var(--lila);outline-offset:2px;box-shadow:0 0 0 3px var(--ink)}
+  .row{display:flex;gap:10px}
+  button{font:700 1rem "Bricolage Grotesque",sans-serif;cursor:pointer;color:var(--ink);background:var(--lila);
+    border:3px solid var(--ink);padding:10px 16px;border-radius:14px;box-shadow:3px 3px 0 var(--ink);
+    transition:transform .12s,box-shadow .12s}
+  button:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--ink)}
+  button:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+  button.ghost{background:#fff}
+  #gen{background:var(--mantequilla)}
+  ul.rules{list-style:none;padding:0;margin:22px 0 0;display:grid;gap:12px}
+  .rules li{display:flex;gap:12px;align-items:flex-start;padding:11px 14px;border:3px solid var(--ink);
+    border-radius:18px;background:var(--rosa);color:var(--bad-ink);font-weight:700;
+    transition:background .25s,color .25s,transform .25s}
+  .rules li.ok{background:var(--menta);color:var(--ok-ink);transform:rotate(-.8deg)}
+  .rules .icon{flex:none;width:30px;height:30px;display:grid;place-items:center;border:3px solid currentColor;
+    border-radius:50%;background:#fff;font-size:1rem;line-height:1}
+  .rules small{display:block;font-weight:400;color:var(--ink);opacity:.85}
+  #msg{margin-top:16px;font-weight:800;min-height:1.6em;font-size:1.05rem}
+  #msg.bad{color:var(--bad-ink)} #msg.ok{color:var(--ok-ink)}
+  #results{display:grid;gap:12px;margin-top:8px}
+  .pw{display:flex;gap:10px;align-items:center;padding:10px;background:#fff;border:3px solid var(--ink);border-radius:18px}
+  .pw:nth-child(1){background:var(--lila)} .pw:nth-child(2){background:var(--menta)} .pw:nth-child(3){background:var(--rosa)}
+  .pw code{flex:1;overflow-wrap:anywhere;font:500 .98rem "DM Mono",ui-monospace,monospace}
+  .hint{margin:12px 0 4px;font-size:.95rem}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}section,h1,.badge,.rules li.ok{transform:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Cerrojo</h1><span class="badge">contraseñas con carácter</span></header>
+  <p class="sub">Comprueba qué tan sólida es tu contraseña y genera opciones seguras a partir de una frase que puedas recordar.</p>
+
+  <div class="grid">
+    <!-- PARTE 1: VALIDADOR -->
+    <section aria-labelledby="t1">
+      <h2 id="t1">Validador de contraseña</h2>
+      <label for="pw">Escribe una contraseña</label>
+      <div class="row">
+        <input id="pw" type="password" autocomplete="off" spellcheck="false">
+        <button id="toggle" class="ghost" type="button" aria-pressed="false">Mostrar</button>
+      </div>
+      <div id="msg" role="status" aria-live="polite"></div>
+      <ul class="rules" id="rules">
+        <li data-rule="length"><span class="icon">✗</span><span>Longitud: 12 caracteres o más</span></li>
+        <li data-rule="variety"><span class="icon">✗</span><span>Variedad: letras, números y símbolos<small>Incluye mayúsculas, minúsculas, números y símbolos.</small></span></li>
+        <li data-rule="obvious"><span class="icon">✗</span><span>Evita lo obvio: sin palabras comunes ni secuencias<small>No uses "password", "qwerty", 1234, tu nombre o fecha de nacimiento.</small></span></li>
+        <li data-rule="phrase"><span class="icon">✗</span><span>Frase secreta: combina 3 o más palabras únicas<small>Ejemplo: luna-cafe-bicicleta.</small></span></li>
+      </ul>
+    </section>
+
+    <!-- PARTE 2: GENERADOR -->
+    <section aria-labelledby="t2">
+      <h2 id="t2">Generador de contraseñas</h2>
+      <label for="phrase">Tu frase</label>
+      <div class="row">
+        <input id="phrase" type="text" placeholder="mi gato come pescado" autocomplete="off">
+        <button id="gen" type="button">Generar</button>
+      </div>
+      <p class="hint" id="genhint">Escribe una frase y pulsa Generar para ver 3 opciones con leetspeak.</p>
+      <div id="results" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+/* ---------- Datos ---------- */
+const COMMON_PASSWORDS = ["123456","123456789","12345678","password","qwerty","abc123","111111","123123","admin","letmein",
+  "welcome","monkey","dragon","iloveyou","1234567","12345","000000","qwerty123","password1","contraseña","contrasena",
+  "123456789012","1q2w3e4r","passw0rd","p@ssw0rd","P@ssw0rd","administrador","football","futbol","princesa","superman",
+  "sunshine","master","hello","freedom","whatever","trustno1","zaq12wsx","987654321","654321","qazwsx","mexico","america"];
+const COMMON_WORDS = ["password","contrasena","qwerty","admin","welcome","login","letmein","iloveyou","te amo","teamo",
+  "usuario","user","root","master","dragon","monkey","mexico","futbol","football","123456","abcdef","1q2w3e"];
+const EXTRA_WORDS = ["luna","cafe","bicicleta","nube","tigre","río","cobre","monte","faro","trueno","jade","volcan"];
+const LEET = {a:["4","@"],e:["3"],i:["1","!"],o:["0"],s:["5","$"],t:["7"]};
+const LEET_REVERSE = {"4":"a","@":"a","3":"e","1":"i","!":"i","0":"o","5":"s","$":"s","7":"t"};
+const SYMBOLS = "!@#$%^&*?+=";
+
+/* ---------- Utilidades ---------- */
+const rnd = n => { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; };
+const pick = arr => arr[rnd(arr.length)];
+const strip = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const normalizeLeet = s => strip(s).toLowerCase().replace(/[431!@0$57]/g, c => LEET_REVERSE[c] || c);
+
+/* ---------- Reglas ---------- */
+function hasSequence(s){
+  const t = s.toLowerCase();
+  for(let i=0;i<t.length-3;i++){
+    const a=t.charCodeAt(i),b=t.charCodeAt(i+1),c=t.charCodeAt(i+2),d=t.charCodeAt(i+3);
+    if(b-a===1&&c-b===1&&d-c===1) return true;
+    if(a-b===1&&b-c===1&&c-d===1) return true;
+    if(a===b&&b===c&&c===d) return true;
+  }
+  return false;
+}
+function isObvious(pw){
+  if(!pw) return {obvious:false,common:false};
+  const low = pw.toLowerCase();
+  const common = COMMON_PASSWORDS.some(p => p.toLowerCase()===low);
+  const norm = normalizeLeet(pw);
+  const word = COMMON_WORDS.some(w => norm.includes(normalizeLeet(w)));
+  return {common, obvious: common || word || hasSequence(pw)};
+}
+function wordChunks(pw){
+  const chunks = strip(pw).split(/[^A-Za-z]+/).filter(c => c.length>=3);
+  return new Set(chunks.map(c=>c.toLowerCase()));
+}
+function evaluate(pw){
+  const {common,obvious} = isObvious(pw);
+  return {
+    common,
+    length: pw.length>=12,
+    variety: /[a-z]/.test(pw)&&/[A-Z]/.test(pw)&&/\d/.test(pw)&&/[^A-Za-z0-9]/.test(pw),
+    obvious: pw.length>0 && !obvious,
+    phrase: wordChunks(pw).size>=3
+  };
+}
+
+/* ---------- Validador reactivo ---------- */
+const pw = document.getElementById("pw");
+const msg = document.getElementById("msg");
+function render(){
+  const r = evaluate(pw.value);
+  document.querySelectorAll("#rules li").forEach(li=>{
+    const ok = r[li.dataset.rule];
+    li.classList.toggle("ok", ok);
+    li.querySelector(".icon").textContent = ok ? "✓" : "✗";
+  });
+  if(!pw.value){ msg.textContent=""; msg.className=""; return; }
+  if(r.common){ msg.textContent="Esta es una contraseña demasiado usada. Elige otra."; msg.className="bad"; }
+  else if(r.length&&r.variety&&r.obvious&&r.phrase){ msg.textContent="Contraseña segura."; msg.className="ok"; }
+  else { msg.textContent=""; msg.className=""; }
+}
+pw.addEventListener("input", render);
+document.getElementById("toggle").addEventListener("click", e=>{
+  const show = pw.type==="password";
+  pw.type = show ? "text" : "password";
+  e.target.textContent = show ? "Ocultar" : "Mostrar";
+  e.target.setAttribute("aria-pressed", show);
+});
+
+/* ---------- Generador ---------- */
+function leetify(word, intensity){
+  return [...word].map((ch,i)=>{
+    const opts = LEET[ch.toLowerCase()];
+    if(!opts || rnd(100)>=intensity) return ch;
+    return pick(opts);
+  }).join("");
+}
+function capitalize(w){ return w.charAt(0).toUpperCase()+w.slice(1); }
+function generate(phrase){
+  let words = strip(phrase).toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if(!words.length) return [];
+  const pool = EXTRA_WORDS.map(strip).filter(w=>!words.includes(w));
+  while(words.length<3) words.push(pool.splice(rnd(pool.length),1)[0]);
+  const seps = ["-","_",".","#","+"];
+  const out = new Set();
+  let guard = 0;
+  while(out.size<3 && guard++<50){
+    const sep = pick(seps);
+    const body = words.map((w,i)=> leetify(i%2===0?capitalize(w):w, 55+rnd(30))).join(sep);
+    const tail = String(10+rnd(90)) + pick([...SYMBOLS]);
+    const cand = body + sep + tail;
+    if(evaluate(cand).length && evaluate(cand).variety && evaluate(cand).obvious) out.add(cand);
+  }
+  return [...out];
+}
+async function copyText(text, btn){
+  try{ await navigator.clipboard.writeText(text); }
+  catch{ const t=document.createElement("textarea"); t.value=text; document.body.appendChild(t); t.select();
+    document.execCommand("copy"); t.remove(); }
+  const old = btn.textContent; btn.textContent="¡Copiada!";
+  setTimeout(()=>btn.textContent=old,1500);
+}
+document.getElementById("gen").addEventListener("click", ()=>{
+  const phrase = document.getElementById("phrase").value.trim();
+  const box = document.getElementById("results");
+  const hint = document.getElementById("genhint");
+  box.innerHTML="";
+  if(!phrase){ hint.textContent="Escribe una frase primero."; return; }
+  hint.textContent="Elige una y cópiala. Se generan en tu navegador; no se envían a ningún servidor.";
+  generate(phrase).forEach(p=>{
+    const row = document.createElement("div"); row.className="pw";
+    const code = document.createElement("code"); code.textContent = p;
+    const b = document.createElement("button"); b.type="button"; b.className="ghost"; b.textContent="Copiar";
+    b.addEventListener("click", ()=>copyText(p,b));
+    row.append(code,b); box.appendChild(row);
+  });
+});
+document.getElementById("phrase").addEventListener("keydown", e=>{ if(e.key==="Enter") document.getElementById("gen").click(); });
+render();
+</script>
+</body>
+</html>
